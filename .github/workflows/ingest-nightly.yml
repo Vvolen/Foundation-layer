@@ -1,0 +1,70 @@
+name: Nightly Ingestion
+
+# HOW TO ENABLE:
+#   1. Uncomment the 'schedule' trigger below
+#   2. Add the required secrets in GitHub repo settings:
+#      Settings → Secrets and variables → Actions → New repository secret
+#      Required: SUPABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY,
+#                NOTION_API_KEY, NOTION_DATABASE_ID
+#   3. Set INGEST_SOURCE_URL to the URL you want to ingest nightly
+#   4. Commit this change — the cron will activate automatically
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_type:
+        description: "Source type (youtube, pdf, url, text)"
+        required: true
+        default: "youtube"
+        type: choice
+        options:
+          - youtube
+          - pdf
+          - url
+          - text
+      source_url:
+        description: "Source URL to ingest"
+        required: true
+        type: string
+  # schedule:
+  #   - cron: '0 3 * * *'   # 3am UTC daily — uncomment to enable
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run ingestion pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: |
+          python run_ingest.py \
+            --source "${{ github.event.inputs.source_type }}" \
+            --url "${{ github.event.inputs.source_url }}"
+
+      - name: Upload pipeline artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-artifacts-${{ github.run_id }}
+          path: pipeline_artifacts/
+          retention-days: 7
