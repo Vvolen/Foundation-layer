@@ -1,0 +1,76 @@
+name: Self-Evolution (Versailles Sync)
+
+# Template for the Versailles self-evolution workflow.
+# This action will:
+#   1. Pull the latest META_INDEX from Vvolen/Versailles
+#   2. Check for stale content (fragments older than N days without access)
+#   3. Run RAPTOR consolidation if needed
+#   4. Update the META_INDEX and open a PR if changes found
+#
+# STATUS: Template only — activate in Phase 2
+#
+# HOW TO ENABLE:
+#   1. Uncomment the schedule trigger below
+#   2. Add VERSAILLES_PAT secret (Personal Access Token with repo scope for Vvolen/Versailles)
+#   3. Implement the evolution scripts referenced below
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 4 * * 0'   # 4am UTC every Sunday — uncomment to enable
+
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout foundation-layer
+        uses: actions/checkout@v4
+
+      - name: Checkout Versailles (the Brain repo)
+        uses: actions/checkout@v4
+        with:
+          repository: Vvolen/Versailles
+          token: ${{ secrets.VERSAILLES_PAT }}
+          path: versailles
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # PHASE 2: Uncomment and implement these steps
+      # - name: Check for stale memory fragments
+      #   env:
+      #     SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      #     SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      #   run: python scripts/check_stale.py
+
+      # - name: Run RAPTOR consolidation if needed
+      #   env:
+      #     SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      #     SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      #   run: python scripts/raptor_consolidate.py
+
+      # - name: Refresh META_INDEX
+      #   run: python scripts/refresh_meta_index.py --output versailles/META_INDEX.md
+
+      # - name: Open PR if META_INDEX changed
+      #   uses: peter-evans/create-pull-request@v6
+      #   with:
+      #     token: ${{ secrets.VERSAILLES_PAT }}
+      #     path: versailles
+      #     commit-message: "chore: auto-refresh META_INDEX"
+      #     title: "[Auto] META_INDEX refresh"
+      #     body: "Automated META_INDEX refresh from foundation-layer self-evolution workflow."
+      #     branch: auto/meta-index-refresh
+
+      - name: Placeholder — Self-evolution not yet implemented
+        run: echo "Self-evolution workflow template. Implement in Phase 2."
