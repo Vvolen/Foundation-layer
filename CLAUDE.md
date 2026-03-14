@@ -65,6 +65,7 @@ Phase 3 (Agent Surface)
 | Cold-start task plan | `plans/task_plan.md` |
 | Architectural decisions | `plans/findings.md` |
 | Session progress log | `plans/progress.md` |
+| **Power tools & MCP reference** | **`plans/POWER_TOOLS.md`** |
 | Node function signatures | `nodes/<node_name>.py` docstrings |
 | Pipeline orchestration | `run_ingest.py` |
 | Environment variables | `.env.example` |
@@ -157,6 +158,24 @@ class PipelineState:
     errors: list                   # Accumulated errors (nodes 5-8)
     checkpoint_path: str           # Where to save/load state
 ```
+
+---
+
+## Power Tools & Environment
+
+This repo uses an enhanced Claude Code environment. See `plans/POWER_TOOLS.md` for the complete reference.
+
+**Core tools (installed via setup script):**
+- **Ruflo** — multi-agent swarm orchestrator (queen-node topology)
+- **mcpc** — MCP context proxy (progressive disclosure for tools)
+- **jCodeMunch** — token-efficient code exploration (99% savings)
+- **skillfish** — universal skill manager
+
+**Key MCP servers (configured in `.mcp.json`):**
+- **Context7** — injects current library docs at prompt time
+- **Context-Mode** — compresses output by up to 98%
+
+**Design principle:** Progressive disclosure. Don't load everything at once. Start with structure, reveal details on demand. This applies to code reading, tool loading, skill activation, and memory hydration.
 
 ---
 
