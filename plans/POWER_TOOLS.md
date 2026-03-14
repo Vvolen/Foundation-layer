@@ -179,23 +179,73 @@ Three tools explicitly handle turning messy input into structured, optimized pro
 
 **Definition:** Only show information when it's needed, not before. Start with the minimum, reveal more on demand.
 
-**Origin:** UX/UI design principle (coined by Jakob Nielsen). A form doesn't show advanced options until you click "Advanced."
+**Origin:** UX/UI design principle coined by Jakob Nielsen (1995). A restaurant menu shows categories first, not every ingredient of every dish. Google shows a search box, not 50 filters. At each step, you get just enough information to make the next decision.
 
-**How it applies to AI/LLM context:**
+**Three core benefits:** Improves learnability (easier to start), efficiency (less scanning irrelevant info), and reduces errors (fewer wrong choices).
 
-1. **MCP Tool Loading (mcpc):** Instead of loading all 200+ tool definitions from 15 MCP servers into the context window at startup (thousands of tokens wasted), mcpc creates a meta-index. The agent sees one `search_tools` function. When it needs a specific capability, it searches, finds the right tool, and only THEN loads the full schema. Progressive disclosure of capabilities.
+### Why This Is THE Pattern for AI
 
-2. **Skill Loading (skillfish):** Instead of injecting all 19 development skills into every conversation, skills are listed by name. The agent loads a specific skill only when the task requires it. Progressive disclosure of methodology.
+An LLM's context window is finite. Every tool definition, every document, every instruction consumes tokens. The instinct is to front-load everything — all documentation, all tools, all history. This is like handing someone a 500-page manual before they ask a question.
 
-3. **Code Reading (jCodeMunch):** Instead of reading 500-line files to understand structure, jCodeMunch reveals just the signatures and hierarchy. If you need implementation details, you progressively disclose deeper into specific functions. Progressive disclosure of code.
+Practitioners call this **"context rot"** — as irrelevant information accumulates, the AI's effective intelligence degrades. It struggles to find what matters in the noise.
 
-4. **Memory Hydration (NickOS):** Instead of loading the entire memory database into context, the session hydration RPC returns only the top-N most relevant fragments for the current query. Progressive disclosure of knowledge.
+Progressive disclosure for LLMs means organizing information into layers:
+- **Layer 1 (Index):** Lightweight metadata — titles, short descriptions, token counts
+- **Layer 2 (Details):** Full content, fetched only when the AI determines it's relevant
+- **Layer 3 (Deep Dive):** Original source files, read only when truly needed
 
-5. **Output Compression (Context-Mode):** Instead of verbose full-sentence output, Context-Mode compresses to structured formats. If you need more detail, you ask for expansion. Progressive disclosure of response depth.
+### The Numbers
 
-**Why it matters:** The context window is finite. Progressive disclosure is how you fit infinite capability into finite context. It's the reason this entire superstack works without blowing up the token budget.
+Research shows this approach delivers:
+- **100x token reduction** while maintaining same task success rates (Speakeasy)
+- **85-95% reduction** in initial context from MCP tool schemas (SynapticLabs)
+- **60-80% cost reduction** since LLM API costs scale linearly with tokens (Redis)
+- **43% accuracy improvement** when using meta-tool proxies vs. loading all tools (mcpproxy-go)
+- Tool schemas typically represent **60-80% of token usage** in static toolsets
 
-**Your insight:** This is exactly why you were able to go from plain Claude Code to supercharged Claude Code in one session. You didn't try to learn everything at once. You started with the problem (context efficiency), found the first solution (jCodeMunch), and that revealed the next layer (MCP servers), which revealed the next layer (skills), which revealed the next layer (orchestration). Progressive disclosure of the toolkit itself.
+### The Meta-Tool Pattern
+
+The industry standard implementation of progressive disclosure for MCP:
+
+1. Instead of loading 50 tool schemas, load **2-3 proxy tools**: `discover()`, `describe()`, `execute()`
+2. The AI uses `discover()` to search for relevant tools by keyword
+3. It uses `describe()` to get the full schema of only the tools it needs
+4. It uses `execute()` to run the chosen tool
+
+This is exactly what **mcpc** does. Initial context goes from ~10,000 tokens to ~600 (constant, regardless of how many tools exist).
+
+### How Each Tool in Our Stack Uses Progressive Disclosure
+
+| Tool | What It Progressively Discloses | Without It |
+|------|-------------------------------|------------|
+| **mcpc** | MCP tool schemas — meta-index first, full schema on demand | All 200+ tool definitions loaded at startup |
+| **skillfish** | Skills — names listed, full methodology loaded on activation | All 19+ skills injected into every conversation |
+| **jCodeMunch** | Code structure — signatures first, implementation on demand | Reading 500-line files to find 3 function signatures |
+| **Context-Mode** | Output depth — compressed first, expand on request | Verbose full-sentence output consuming response tokens |
+| **NickOS Memory** | Knowledge — top-N relevant fragments per query | Loading entire memory database into context |
+| **CLAUDE.md** | Agent instructions — this file points to deeper docs | One massive instruction file or no instructions at all |
+
+### The Trade-offs
+
+Progressive disclosure is not free:
+- **Latency:** Loading on demand means extra round-trips (discover → describe → execute = 3 steps instead of 1)
+- **Routing errors:** AI must decide what to load from metadata alone. Poor descriptions → missed tools
+- **Complexity:** Building indexes, proxies, and multi-tier architectures adds engineering overhead
+
+The core trade-off: **speed versus intelligence**. Front-loading everything is faster per-request but noisier. Progressive disclosure is slower per-request but produces better results at scale.
+
+### Your Insight
+
+This is exactly why you went from plain Claude Code to supercharged Claude Code in one session. You didn't try to learn everything at once. You started with the problem (context efficiency), found the first solution (jCodeMunch), and that revealed the next layer (MCP servers), which revealed the next layer (skills), which revealed the next layer (orchestration). Progressive disclosure of the toolkit itself. The pattern applied to its own discovery.
+
+### Sources
+- [Progressive Disclosure — Nielsen Norman Group](https://www.nngroup.com/articles/progressive-disclosure/)
+- [The Meta-Tool Pattern — SynapticLabs](https://blog.synapticlabs.ai/bounded-context-packs-meta-tool-pattern)
+- [Why AI Agents Need Progressive Disclosure — Honra](https://www.honra.io/articles/progressive-disclosure-for-ai-agents)
+- [Reducing Token Usage by 100x — Speakeasy](https://www.speakeasy.com/blog/how-we-reduced-token-usage-by-100x-dynamic-toolsets-v2)
+- [Progressive Disclosure Might Replace MCP — MCPJam](https://www.mcpjam.com/blog/claude-agent-skills)
+- [Stop Bloating Your CLAUDE.md — alexop.dev](https://alexop.dev/posts/stop-bloating-your-claude-md-progressive-disclosure-ai-coding-tools/)
+- [LLM Token Optimization — Redis](https://redis.io/blog/llm-token-optimization-speed-up-apps/)
 
 ---
 
