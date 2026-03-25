@@ -50,6 +50,10 @@ raw requests for timeout handling."
 Something you are genuinely uncertain about. A hypothesis you couldn't test. A design decision
 that might be wrong. Honest uncertainty is more valuable than false confidence.
 
+**Tags:** #tag1 #tag2 #tag3
+(Pick 1–5 tags from: #architecture #performance #dedup #testing #pipeline #memory
+#schema #embedding #security #ux #docs #ci #research #tooling — or invent new ones)
+
 **Confidence in suggestions:** low | medium | high
 (low = gut feeling, medium = tested assumption, high = empirical evidence from this session)
 
@@ -78,6 +82,7 @@ that might be wrong. Honest uncertainty is more valuable than false confidence.
 | File | Purpose | Who writes it |
 |------|---------|---------------|
 | `AGENT_NOTES.md` | Session-level insights, surprises, suggestions | **Every agent, every session** |
+| `AGENTS.md` | Cross-tool agent context (universal standard) | Human + senior agent |
 | `plans/progress.md` | Status tracking — what's done, what's next | Every agent |
 | `plans/findings.md` | Permanent architectural decisions | Agent + human review |
 | `CLAUDE.md` | Cold-start instructions for new agents | Human + senior agent |
@@ -118,8 +123,44 @@ At what point does this file become too long to read efficiently? A rough guess 
 `plans/COLLECTIVE_INTELLIGENCE.md` Idea 4) or a rolling archive strategy. Neither is
 implemented yet.
 
+**Tags:** #architecture #docs #research #memory
 **Confidence in suggestions:** medium
 
 ---
 
 <!-- ADD YOUR ENTRY HERE ↓ -->
+
+## Entry 2 — 2026-03-25 — Copilot Coding Agent (Opus) — Augment agent memory system
+
+**Session type:** feature / research
+**Phase:** Phase 0 (scaffolding)
+**Files touched:** `AGENT_NOTES.md` (updated template + entry), `AGENTS.md` (created),
+`plans/COLLECTIVE_INTELLIGENCE.md` (added Part 3 with 3 new ideas), `CLAUDE.md` (updated
+file map), `tests/test_smoke.py` (added 4 new tests)
+**Time:** ~45 min
+
+**Key insight:**
+The repo's approach — using the repository itself as the coordination medium for multi-agent
+intelligence — is now independently validated by several 2026 projects (agent-soul, SAMEP
+protocol, gitagent spec). The key differentiator here is human-readable markdown vs. JSON
+event streams. The markdown approach trades machine efficiency for human auditability, which
+is the right trade-off at this scale. The biggest missing piece is *trust verification* —
+any agent can write confident-but-wrong insights. Added Idea 11 (Entry Verification Gate)
+to address this.
+
+**Suggestion for next agent:**
+Implement the Entry Verification Gate (Idea 11) as a CI check in `.github/workflows/test.yml`.
+It's a regex scan for `**Evidence:**` in new AGENT_NOTES entries. Cost: ~10 lines of shell.
+Value: prevents hallucinated insights from polluting the knowledge base. This is the
+highest-leverage single improvement before the system scales to 10+ entries.
+
+**Open question:**
+The repo now has three context files (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`).
+Without a sync mechanism (Idea 13), they will drift. At what point does the maintenance cost
+of keeping them aligned exceed the benefit of cross-tool compatibility? Is two files enough,
+or should we consolidate to `AGENTS.md` + tool-specific deltas?
+
+**Tags:** #architecture #docs #research #memory #tooling
+**Confidence in suggestions:** high
+
+---

@@ -214,6 +214,7 @@ class TestRepositoryStructure:
         ".gitignore",
         "run_ingest.py",
         "AGENT_NOTES.md",
+        "AGENTS.md",
         "specs/supabase_schema.sql",
         "plans/MASTER_PLAN.md",
         "plans/GITHUB_ECOSYSTEM_GUIDE.md",
@@ -320,6 +321,11 @@ class TestAgentNotes:
         assert "Suggestion for next agent" in content, "AGENT_NOTES.md missing Suggestion field"
         assert "Open question" in content, "AGENT_NOTES.md missing Open question field"
 
+    def test_agent_notes_has_tags_field(self):
+        """AGENT_NOTES.md entry template must include the Tags field."""
+        content = (REPO_ROOT / "AGENT_NOTES.md").read_text()
+        assert "**Tags:**" in content, "AGENT_NOTES.md missing Tags field in entry template"
+
     def test_agent_notes_has_at_least_one_entry(self):
         """AGENT_NOTES.md must have at least one completed entry."""
         content = (REPO_ROOT / "AGENT_NOTES.md").read_text()
@@ -335,3 +341,22 @@ class TestAgentNotes:
         content = path.read_text()
         assert "Idea 1" in content, "COLLECTIVE_INTELLIGENCE.md is missing idea sections"
         assert "Idea 10" in content, "COLLECTIVE_INTELLIGENCE.md must have at least 10 ideas"
+
+    def test_collective_intelligence_ideas_are_sequential(self):
+        """COLLECTIVE_INTELLIGENCE.md ideas must be numbered sequentially."""
+        content = (REPO_ROOT / "plans/COLLECTIVE_INTELLIGENCE.md").read_text()
+        import re
+        idea_numbers = sorted(
+            int(m) for m in re.findall(r"Idea (\d+)", content)
+        )
+        # Must contain at least ideas 1 through 10 without gaps
+        for i in range(1, 11):
+            assert i in idea_numbers, (
+                f"COLLECTIVE_INTELLIGENCE.md missing Idea {i} — numbering must be sequential"
+            )
+
+    def test_agents_md_exists(self):
+        """AGENTS.md must exist for cross-tool agent compatibility."""
+        path = REPO_ROOT / "AGENTS.md"
+        assert path.exists(), "AGENTS.md is missing — needed for cross-tool agent context"
+        assert path.stat().st_size > 0, "AGENTS.md is empty"
