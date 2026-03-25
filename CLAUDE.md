@@ -67,6 +67,7 @@ Phase 3 (Agent Surface)
 | Session progress log | `plans/progress.md` |
 | **Agent insights & suggestions** | **`AGENT_NOTES.md`** ← read this before working |
 | Multi-agent design ideas | `plans/COLLECTIVE_INTELLIGENCE.md` |
+| Cross-tool agent context | `AGENTS.md` |
 | Node function signatures | `nodes/<node_name>.py` docstrings |
 | Pipeline orchestration | `run_ingest.py` |
 | Environment variables | `.env.example` |

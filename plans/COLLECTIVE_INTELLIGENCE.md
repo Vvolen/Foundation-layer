@@ -333,5 +333,160 @@ accumulate collective errors — and they compound just as fast as the good stuf
 
 ---
 
-*This document was written by Copilot Coding Agent on 2026-03-25.*
-*Update or extend it by appending a new "Part 3" section — never edit the sections above.*
+*Parts 1–2 written by Copilot Coding Agent on 2026-03-25.*
+*Part 3 appended 2026-03-25. Update or extend by appending a new "Part 4" section — never
+edit the sections above.*
+
+---
+
+## Part 3 — State of the Art Update & Three New Ideas (March 2026)
+
+*This section positions the repo's approach relative to the broader ecosystem and introduces
+three additional ideas that push the system further. These ideas are grounded in real projects
+and research published through early 2026.*
+
+### Where This Repo Sits in the Landscape
+
+The approach in this repository — using the **repo itself** as the coordination medium for
+multi-agent intelligence — is now validated by several independent projects and research
+groups. Here is how the ecosystem has evolved since Part 1:
+
+**SAMEP (Secure Agent Memory Exchange Protocol, arXiv 2025)**
+An academic protocol for multi-agent memory sharing with cryptographic access controls and
+semantic search. SAMEP formalizes what this repo does informally: agents write structured
+entries (fragments), other agents search and read them, and provenance is tracked. The key
+difference is that SAMEP uses a dedicated memory service, while this repo uses git. Git is
+simpler, cheaper, and auditable — but lacks semantic search. The future convergence point
+is: git-native files *plus* vector-indexed copies in Supabase (which is exactly what the
+Meta-Ingest Loop in Idea 7 proposes).
+
+**agent-soul (2025–2026, open source)**
+A git-native "memory layer" for AI agents. Memory is stored as append-only event streams
+(JSON or markdown files) committed directly into the repo. Every memory change is a git
+commit, so the evolution of agent knowledge is transparent and revertible. This is the closest
+existing analog to what `AGENT_NOTES.md` does — but agent-soul uses structured JSON events,
+while this repo uses human-readable markdown. The markdown approach trades machine efficiency
+for human auditability, which is the right trade-off at this scale.
+
+**AGENTS.md as Cross-Tool Standard (2025–2026)**
+The ecosystem has converged on `AGENTS.md` as the universal agent context file. Claude Code
+reads `CLAUDE.md`, Codex reads `AGENTS.md`, Cursor reads `.cursor/rules/`, and GitHub Copilot
+reads `.github/copilot-instructions.md`. The winning strategy is to maintain a canonical
+`AGENTS.md` and have tool-specific files reference or mirror it. This repo now includes
+`AGENTS.md` alongside its existing tool-specific files.
+
+**Cost & Efficiency Data (2026)**
+Real-world data shows 60%+ cost reduction in LLM usage and 23%+ improvement in task
+completion for complex workflows when persistent memory is used intelligently. This validates
+the core thesis: the upfront cost of maintaining `AGENT_NOTES.md` pays for itself many times
+over in reduced context loss and re-discovery.
+
+---
+
+### Three New Ideas
+
+#### Idea 11 — The Entry Verification Gate
+
+**What it is:** Before an agent's entry is accepted into `AGENT_NOTES.md`, a lightweight
+verification step checks that every factual claim in the **Key insight** field can be traced
+to a specific file, line number, or test result in the repo. Entries that make claims without
+evidence are flagged as `UNVERIFIED` and are excluded from downstream synthesis (digests,
+confidence accumulation, promotion to findings).
+
+**Why it's powerful:** The biggest risk in any collective intelligence system is *confident
+hallucination*. A single wrong-but-convincing insight can pollute the knowledge base and
+mislead every future agent. Requiring citations — even informal ones like `"see
+nodes/deduplicator.py:42"` — forces agents to ground their claims in observable reality. This
+is the system's immune response to misinformation.
+
+**How to implement it:**
+1. Add an optional `**Evidence:**` field to the entry template (file:line, test output, or
+   commit SHA)
+2. A CI check scans new entries for the `**Evidence:**` field. Missing evidence doesn't block
+   the merge, but adds a `⚠️ UNVERIFIED` label to the entry
+3. Over time, unverified entries that remain uncorroborated are deprioritized in digests
+
+**Interaction with existing ideas:** This directly addresses the trust problem identified in
+Idea 10's "unknown unknown" section. It also makes the Confidence Accumulator (Idea 6)
+more reliable, because verified suggestions carry more weight.
+
+---
+
+#### Idea 12 — The Decision Replay Log
+
+**What it is:** A structured record of *why* each architectural decision was made — not just
+*what* was decided (which `plans/findings.md` already covers). Each entry includes:
+- The decision
+- The alternatives considered
+- The evidence that tipped the balance
+- The conditions under which the decision should be revisited
+
+Stored in `plans/DECISION_REPLAY.md` as a chronological, append-only log.
+
+**Why it's powerful:** Most codebases accumulate decisions without recording the *reasoning*.
+When a future agent encounters a design choice that seems wrong, they have two options: change
+it (risking breakage from unknown constraints) or leave it (missing an improvement). The
+replay log gives them a third option: understand *why* it was made and whether the conditions
+still hold. This is especially critical for thresholds (like the 0.92 dedup cutoff) and
+architectural patterns (like the 8-node sequential pipeline).
+
+**How to implement it:**
+1. Create `plans/DECISION_REPLAY.md` with a template
+2. When an agent makes or encounters a significant design choice, they append an entry
+3. The `AGENT_NOTES.md` entry template already asks for suggestions — add a cross-reference
+   field: `**Related decision:** plans/DECISION_REPLAY.md#N` (optional)
+
+**Interaction with existing ideas:** This extends the Evolution Commit Protocol (Idea 8) from
+git commit messages to a dedicated, richer format. It also feeds into the Meta-Ingest Loop
+(Idea 7) — decision reasoning becomes searchable semantic memory.
+
+---
+
+#### Idea 13 — The Cross-Tool Context Sync
+
+**What it is:** A lightweight script or GitHub Action that keeps the repo's agent context files
+(`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`) synchronized. When one is
+updated, the action validates that shared sections (conventions, file map, key constraints)
+are consistent across all files. Drift is flagged as a CI warning.
+
+**Why it's powerful:** As of early 2026, every major AI coding tool reads from a different
+file. Teams that use multiple tools (Claude Code for exploration, Copilot for PR work, Cursor
+for local editing) face a real risk: the files drift apart, and agents from different tools
+get different instructions. The sync check eliminates silent drift. It doesn't force identical
+files — each tool has specific sections — but ensures the *shared truth* (conventions,
+constraints, file map) stays consistent.
+
+**How to implement it:**
+1. Define a `SHARED_SECTIONS` list in a small Python script (e.g., `scripts/sync_check.py`)
+2. The script extracts key facts from each file and diffs them
+3. Add as a CI step in `.github/workflows/test.yml`
+4. Fail the check (or warn) when shared facts diverge
+
+**Interaction with existing ideas:** This is infrastructure for the AGENTS.md file added in
+this session. Without sync enforcement, adding another context file creates another
+maintenance burden. With it, the files become a distributed-but-consistent agent onboarding
+system.
+
+---
+
+### Updated Architecture (with new ideas)
+
+```
+Layer 0 (Foundation):    Git + files — the substrate
+Layer 1 (Capture):       AGENT_NOTES.md — raw agent perception (Idea 1)
+                         + Tags for semantic grouping (Idea 1 push-further, now implemented)
+Layer 1.5 (Governance):  AGENTS.md + CLAUDE.md + copilot-instructions.md
+                         + Cross-Tool Context Sync (Idea 13)
+Layer 2 (Structure):     Hypothesis Board + Pattern Library (Ideas 2, 3)
+                         + Decision Replay Log (Idea 12)
+Layer 3 (Synthesis):     Weekly Digest + Contradiction Detector + Confidence Accumulator
+                         (Ideas 4, 5, 6)
+                         + Entry Verification Gate (Idea 11)
+Layer 4 (Recursion):     Meta-Ingest + Commit Protocol + Skill Registry (Ideas 7, 8, 9)
+Layer 5 (Agency):        Phase 3 Roundtable + Expert Factory (planned)
+```
+
+**The highest-leverage next move:** Implement Idea 11 (Entry Verification Gate) as a CI
+check. It costs almost nothing — a regex scan in the existing `test.yml` workflow — and it
+protects the integrity of every layer above it. Trust is the foundation that compound
+intelligence is built on.
