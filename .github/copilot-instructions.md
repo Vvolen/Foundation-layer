@@ -72,11 +72,13 @@ The dedup thresholds are fixed — do not change them without explicit instructi
 ## What To Do When Assigned an Issue
 
 1. Read `CLAUDE.md` first
-2. Read `plans/task_plan.md` for current phase status
-3. Read `plans/progress.md` for last session state
-4. Check `plans/findings.md` for relevant architectural decisions
-5. Read the relevant node file's docstring to understand the interface
-6. Implement, test, update `plans/progress.md`
+2. **Read the last 3 entries in `AGENT_NOTES.md`** — previous agents may have left critical context
+3. Read `plans/task_plan.md` for current phase status
+4. Read `plans/progress.md` for last session state
+5. Check `plans/findings.md` for relevant architectural decisions
+6. Read the relevant node file's docstring to understand the interface
+7. Implement, test, update `plans/progress.md`
+8. **Write an entry in `AGENT_NOTES.md` before finishing** — this is mandatory, not optional
 
 ## What NOT To Do
 
@@ -87,3 +89,17 @@ The dedup thresholds are fixed — do not change them without explicit instructi
 - Do not use `print()` for logging — use the `logging` module
 - Do not change dedup thresholds without explicit instruction from the repo owner
 - Do not implement Phase 2 or Phase 3 features until Phase 1 is complete and passing tests
+- **Do not finish a session without writing an entry in `AGENT_NOTES.md`**
+
+## Agent Notes (Mandatory Every Session)
+
+`AGENT_NOTES.md` is a living journal written by every agent that works in this repo.
+It is the primary cross-agent memory system.
+
+- **Before starting work:** read the last 3 entries in `AGENT_NOTES.md`
+- **Before finishing work:** append a new entry using the format defined at the top of that file
+- Entries capture: key insight, suggestion for next agent, open question, confidence score
+- Append only — never edit past entries
+
+See `plans/COLLECTIVE_INTELLIGENCE.md` for the full design philosophy and future ideas for
+making this system smarter over time.

@@ -65,6 +65,8 @@ Phase 3 (Agent Surface)
 | Cold-start task plan | `plans/task_plan.md` |
 | Architectural decisions | `plans/findings.md` |
 | Session progress log | `plans/progress.md` |
+| **Agent insights & suggestions** | **`AGENT_NOTES.md`** ← read this before working |
+| Multi-agent design ideas | `plans/COLLECTIVE_INTELLIGENCE.md` |
 | Node function signatures | `nodes/<node_name>.py` docstrings |
 | Pipeline orchestration | `run_ingest.py` |
 | Environment variables | `.env.example` |
@@ -166,3 +168,17 @@ class PipelineState:
 - Supabase service key has admin privileges — handle with care
 - Notion API key scoped to specific databases only
 - Never log fact content that may contain PII
+
+---
+
+## Agent Notes Protocol (Mandatory)
+
+Every agent that works in this repository must:
+
+1. **Before starting:** read the last 3 entries in `AGENT_NOTES.md` for context from prior agents
+2. **Before finishing:** append a new entry to `AGENT_NOTES.md` following the format in that file
+
+The entry takes ~5 minutes. It is the most important 5 minutes of any session, because it is
+the only thing that persists between agents. Code is recoverable from git. Insights are not.
+
+See `plans/COLLECTIVE_INTELLIGENCE.md` for the design philosophy behind this system.
