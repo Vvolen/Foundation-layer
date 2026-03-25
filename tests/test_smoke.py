@@ -213,12 +213,14 @@ class TestRepositoryStructure:
         ".env.example",
         ".gitignore",
         "run_ingest.py",
+        "AGENT_NOTES.md",
         "specs/supabase_schema.sql",
         "plans/MASTER_PLAN.md",
         "plans/GITHUB_ECOSYSTEM_GUIDE.md",
         "plans/task_plan.md",
         "plans/findings.md",
         "plans/progress.md",
+        "plans/COLLECTIVE_INTELLIGENCE.md",
         ".github/copilot-instructions.md",
         ".github/workflows/test.yml",
         ".github/workflows/ingest-nightly.yml",
@@ -290,3 +292,46 @@ class TestRepositoryStructure:
         required_packages = ["openai", "supabase", "python-dotenv"]
         for pkg in required_packages:
             assert pkg in reqs, f"requirements.txt missing package: {pkg}"
+
+
+# =============================================================================
+# Agent Notes Tests
+# =============================================================================
+
+
+class TestAgentNotes:
+    """Verify AGENT_NOTES.md exists, has valid structure, and contains at least one entry."""
+
+    def test_agent_notes_exists(self):
+        """AGENT_NOTES.md must exist and be non-empty."""
+        path = REPO_ROOT / "AGENT_NOTES.md"
+        assert path.exists(), "AGENT_NOTES.md is missing"
+        assert path.stat().st_size > 0, "AGENT_NOTES.md is empty"
+
+    def test_agent_notes_has_rules_section(self):
+        """AGENT_NOTES.md must contain the RULES FOR AGENTS section."""
+        content = (REPO_ROOT / "AGENT_NOTES.md").read_text()
+        assert "RULES FOR AGENTS" in content, "AGENT_NOTES.md missing RULES FOR AGENTS section"
+
+    def test_agent_notes_has_entry_format(self):
+        """AGENT_NOTES.md must define the mandatory entry format."""
+        content = (REPO_ROOT / "AGENT_NOTES.md").read_text()
+        assert "Key insight" in content, "AGENT_NOTES.md missing Key insight field in format spec"
+        assert "Suggestion for next agent" in content, "AGENT_NOTES.md missing Suggestion field"
+        assert "Open question" in content, "AGENT_NOTES.md missing Open question field"
+
+    def test_agent_notes_has_at_least_one_entry(self):
+        """AGENT_NOTES.md must have at least one completed entry."""
+        content = (REPO_ROOT / "AGENT_NOTES.md").read_text()
+        # Entries follow the pattern "## Entry N — YYYY-MM-DD"
+        import re
+        entries = re.findall(r"^## Entry \d+", content, re.MULTILINE)
+        assert len(entries) >= 1, "AGENT_NOTES.md has no entries yet — write the first one!"
+
+    def test_collective_intelligence_has_ideas(self):
+        """COLLECTIVE_INTELLIGENCE.md must exist and contain ideas."""
+        path = REPO_ROOT / "plans/COLLECTIVE_INTELLIGENCE.md"
+        assert path.exists(), "plans/COLLECTIVE_INTELLIGENCE.md is missing"
+        content = path.read_text()
+        assert "Idea 1" in content, "COLLECTIVE_INTELLIGENCE.md is missing idea sections"
+        assert "Idea 10" in content, "COLLECTIVE_INTELLIGENCE.md must have at least 10 ideas"
