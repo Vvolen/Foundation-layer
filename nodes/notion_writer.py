@@ -40,8 +40,134 @@ Notion Page Structure:
 """
 
 import logging
+import os
+from datetime import datetime, timezone
+
+import requests as http_requests
 
 logger = logging.getLogger(__name__)
+
+NOTION_API_VERSION = "2022-06-28"
+NOTION_BASE_URL = "https://api.notion.com/v1"
+
+
+def _get_notion_headers(api_key: str) -> dict:
+    """Build Notion API request headers."""
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Notion-Version": NOTION_API_VERSION,
+    }
+
+
+def _truncate(text: str, max_len: int = 2000) -> str:
+    """Truncate text to max_len characters for Notion blocks."""
+    if len(text) <= max_len:
+        return text
+    return text[:max_len - 3] + "..."
+
+
+def _build_page_blocks(
+    write_results,
+    facts: list,
+    source_type: str,
+    source_ref: str,
+    pipeline_run_id: str,
+) -> list[dict]:
+    """Build the Notion page body blocks."""
+    blocks = []
+
+    # -- Summary heading --
+    blocks.append({
+        "object": "block",
+        "type": "heading_2",
+        "heading_2": {
+            "rich_text": [{"type": "text", "text": {"content": "Summary"}}],
+        },
+    })
+
+    # -- Summary paragraph --
+    written = 0
+    failed = 0
+    if isinstance(write_results, dict):
+        written = write_results.get("written", 0)
+        failed = write_results.get("failed", 0)
+    elif hasattr(write_results, "written"):
+        written = write_results.written
+        failed = write_results.failed
+
+    total_facts = len(facts) if facts else 0
+    summary_text = (
+        f"Ingested {total_facts} atomic facts from {source_type} source. "
+        f"{written} fragments written to memory, {failed} failed. "
+        f"Pipeline run: {pipeline_run_id}"
+    )
+    blocks.append({
+        "object": "block",
+        "type": "paragraph",
+        "paragraph": {
+            "rich_text": [{"type": "text", "text": {"content": summary_text}}],
+        },
+    })
+
+    # -- Key Facts heading --
+    if facts:
+        blocks.append({
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [{"type": "text", "text": {"content": "Key Facts"}}],
+            },
+        })
+
+        # Select top 5 facts by tier priority: procedural > semantic > episodic
+        # Since we may not have tier info on AtomicFact, just take first 5
+        top_facts = facts[:5] if len(facts) >= 5 else facts
+
+        for fact in top_facts:
+            fact_text = fact.text if hasattr(fact, "text") else str(fact)
+            blocks.append({
+                "object": "block",
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {"content": _truncate(fact_text)},
+                    }],
+                },
+            })
+
+    # -- Stats heading --
+    blocks.append({
+        "object": "block",
+        "type": "heading_2",
+        "heading_2": {
+            "rich_text": [{"type": "text", "text": {"content": "Stats"}}],
+        },
+    })
+
+    stats_lines = [
+        f"Source: {source_type} — {_truncate(source_ref, 200)}",
+        f"Total facts extracted: {total_facts}",
+        f"Fragments written: {written}",
+        f"Fragments failed: {failed}",
+        f"Run ID: {pipeline_run_id}",
+        f"Timestamp: {datetime.now(timezone.utc).isoformat()}",
+    ]
+
+    for line in stats_lines:
+        blocks.append({
+            "object": "block",
+            "type": "bulleted_list_item",
+            "bulleted_list_item": {
+                "rich_text": [{
+                    "type": "text",
+                    "text": {"content": line},
+                }],
+            },
+        })
+
+    return blocks
 
 
 def write_to_notion(
@@ -84,5 +210,125 @@ def write_to_notion(
     """
     logger.info("Writing ingestion summary to Notion for run %s", pipeline_run_id)
 
-    # TODO: Implement in Phase 1
-    raise NotImplementedError("Node 8a (notion_writer) not yet implemented — Phase 1")
+    # Resolve API key
+    api_key = notion_api_key or os.environ.get("NOTION_API_KEY")
+    if not api_key:
+        logger.warning("NOTION_API_KEY not set — skipping Notion write")
+        return {}
+
+    # Resolve database ID
+    database_id = notion_database_id or os.environ.get("NOTION_DATABASE_ID")
+    if not database_id:
+        logger.warning("NOTION_DATABASE_ID not set — skipping Notion write")
+        return {}
+
+    headers = _get_notion_headers(api_key)
+
+    # Build page title
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    title_text = _truncate(source_title, 200) if source_title else source_ref[:200]
+    page_title = f"[INGESTED] {title_text} — {date_str}"
+
+    # Build the facts count
+    written = 0
+    if isinstance(write_results, dict):
+        written = write_results.get("written", 0)
+    elif hasattr(write_results, "written"):
+        written = write_results.written
+
+    # Build page properties
+    properties = {
+        "title": {
+            "title": [{"text": {"content": page_title}}],
+        },
+    }
+
+    # Try to set additional properties if database supports them
+    # These are optional — Notion will ignore unsupported properties
+    optional_props = {
+        "Source Type": {
+            "select": {"name": source_type},
+        },
+        "Source URL": {
+            "url": source_ref if source_ref.startswith("http") else None,
+        },
+        "Facts Written": {
+            "number": written,
+        },
+        "Pipeline Run ID": {
+            "rich_text": [{"text": {"content": pipeline_run_id}}],
+        },
+    }
+
+    # Only include Source URL if it's a valid URL
+    if optional_props["Source URL"]["url"] is None:
+        del optional_props["Source URL"]
+
+    properties.update(optional_props)
+
+    # Build page body blocks
+    blocks = _build_page_blocks(
+        write_results, facts, source_type, source_ref, pipeline_run_id,
+    )
+
+    # Create the Notion page
+    payload = {
+        "parent": {"database_id": database_id},
+        "properties": properties,
+        "children": blocks,
+    }
+
+    try:
+        resp = http_requests.post(
+            f"{NOTION_BASE_URL}/pages",
+            headers=headers,
+            json=payload,
+            timeout=30,
+        )
+
+        if resp.status_code == 200:
+            data = resp.json()
+            page_id = data.get("id", "")
+            page_url = data.get("url", "")
+            logger.info("Notion page created: %s", page_url)
+            return {"notion_page_id": page_id, "notion_page_url": page_url}
+        else:
+            error_body = resp.text[:500]
+            logger.warning(
+                "Notion API returned %d: %s", resp.status_code, error_body,
+            )
+            # If properties are unsupported, retry with just title
+            if resp.status_code == 400 and "property" in error_body.lower():
+                logger.info("Retrying with minimal properties...")
+                minimal_payload = {
+                    "parent": {"database_id": database_id},
+                    "properties": {
+                        "title": {
+                            "title": [{"text": {"content": page_title}}],
+                        },
+                    },
+                    "children": blocks,
+                }
+                resp2 = http_requests.post(
+                    f"{NOTION_BASE_URL}/pages",
+                    headers=headers,
+                    json=minimal_payload,
+                    timeout=30,
+                )
+                if resp2.status_code == 200:
+                    data = resp2.json()
+                    return {
+                        "notion_page_id": data.get("id", ""),
+                        "notion_page_url": data.get("url", ""),
+                    }
+                else:
+                    logger.warning("Notion retry also failed: %d", resp2.status_code)
+
+            return {}
+
+    except http_requests.RequestException as e:
+        logger.warning("Notion API request failed: %s", e)
+        return {}
+    except Exception as e:
+        logger.warning("Unexpected error writing to Notion: %s", e)
+        return {}
