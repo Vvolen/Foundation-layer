@@ -164,3 +164,24 @@ or should we consolidate to `AGENTS.md` + tool-specific deltas?
 **Confidence in suggestions:** high
 
 ---
+
+## Entry 3 — 2026-04-21 — Copilot Coding Agent — Add fork janitor
+
+**Session type:** feature
+**Phase:** Phase 0 (scaffolding)
+**Files touched:** `scripts/fork-janitor.sh`, `.github/workflows/fork-janitor.yml`, `docs/ops/fork-janitor.md`, `tests/test_fork_janitor_assets.py`, `plans/progress.md`, `AGENT_NOTES.md`
+**Time:** ~40 min
+
+**Key insight:**
+The safest implementation pattern here is defense-in-depth for fork filtering: use `gh repo list ... --fork` and still apply `select(.isFork == true)` before calling the Actions permissions endpoint. This makes accidental non-fork mutation highly unlikely even if listing behavior changes.
+
+**Suggestion for next agent:**
+After merge, run the new workflow once in dry-run and once with `execute=true`, then copy a short sample of the summary log output into a PR comment for operational confirmation.
+
+**Open question:**
+Should this workflow eventually support org-level fork cleanup (multiple owners) with an allowlist, or remain intentionally single-owner to reduce operational blast radius?
+
+**Tags:** #ci #tooling #security #docs
+**Confidence in suggestions:** high
+
+---

@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-04-21 — Session 3 — Copilot Coding Agent — Fork Janitor Added
+
+**Status:** Fork janitor tooling added and validated ✅
+
+**What was done this session:**
+- Added `scripts/fork-janitor.sh`:
+  - Enumerates repositories using `gh repo list <owner> --limit 1000 --fork --json ...`
+  - Applies an additional `isFork == true` filter before action calls
+  - Defaults to dry-run unless `EXECUTE=1` or `EXECUTE=true`
+  - Disables Actions via `PUT /repos/{owner}/{repo}/actions/permissions` with `enabled=false`
+  - Prints per-repo action lines and final summary (`Total forks | Disabled | Skipped | Errors`)
+  - Exits non-zero only for setup/auth errors; per-repo failures are logged and counted
+- Added `.github/workflows/fork-janitor.yml`:
+  - `workflow_dispatch` inputs: `execute` (boolean, default false), `owner` (string, default empty)
+  - Weekly cron: `0 6 * * 1` (dry-run by default)
+  - Minimal permissions: `contents: read`
+  - Guard step to fail fast if `FORK_JANITOR_PAT` secret is missing
+  - Uses `GH_TOKEN: ${{ secrets.FORK_JANITOR_PAT }}` (no `GITHUB_TOKEN` fallback)
+- Added operations documentation: `docs/ops/fork-janitor.md`
+- Added focused tests: `tests/test_fork_janitor_assets.py`
+
+**Validation run:**
+- Baseline before changes: `python -m pytest tests/ -v` (130 passed)
+- Script syntax check: `bash -n scripts/fork-janitor.sh` (pass)
+- Targeted tests: `python -m pytest tests/test_fork_janitor_assets.py -v` (5 passed)
+- Full suite after changes: `python -m pytest tests/ -v` (135 passed)
+
+**Next session should start with:**
+- Add `FORK_JANITOR_PAT` in repository secrets and run `Fork Janitor` once in dry-run, then with `execute=true` when ready.
+
+---
+
 ## 2026-03-11 — Session 1 — Copilot Coding Agent — Phase 0 Complete
 
 **Status:** Phase 0 scaffolding complete ✅
