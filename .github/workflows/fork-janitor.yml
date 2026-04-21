@@ -1,0 +1,47 @@
+name: Fork Janitor
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: "Disable GitHub Actions on forks (otherwise dry-run only)"
+        required: false
+        type: boolean
+        default: false
+      owner:
+        description: "Owner to scan (defaults to token owner)"
+        required: false
+        type: string
+        default: ""
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  fork-janitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Guard - require FORK_JANITOR_PAT
+        env:
+          FORK_JANITOR_PAT: ${{ secrets.FORK_JANITOR_PAT }}
+        run: |
+          if [ -z "$FORK_JANITOR_PAT" ]; then
+            echo "::error::Missing required secret FORK_JANITOR_PAT. See docs: https://github.com/Vvolen/Foundation-layer/blob/main/docs/ops/fork-janitor.md"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify gh CLI
+        run: gh --version
+
+      - name: Run fork janitor
+        env:
+          GH_TOKEN: ${{ secrets.FORK_JANITOR_PAT }}
+          EXECUTE: ${{ inputs.execute }}
+          OWNER: ${{ inputs.owner }}
+        run: bash scripts/fork-janitor.sh
